@@ -1,6 +1,7 @@
 package gohelper
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -10,6 +11,91 @@ import (
 	"reflect"
 	"strings"
 )
+
+// sendGet sends HTTP GET request to the specified URI. Args can be url.Values and http.Header type.
+func sendGet(method string, uri string, args ...interface{}) (responseBody []byte, statusCode int, err error) {
+	client := &http.Client{}
+
+	req, _ := http.NewRequest(method, uri, nil)
+
+	for _, arg := range args {
+		switch val := arg.(type) {
+		case url.Values:
+			// Assign http query to the request URL
+			req.URL.RawQuery = val.Encode()
+
+		case http.Header:
+			// Assign request header
+			req.Header = val
+		}
+	}
+
+	resp, err := client.Do(req)
+
+	if err != nil {
+		fmt.Printf("Response error. Error:  %+v\n", err.Error())
+		return nil, 500, err
+	}
+
+	defer resp.Body.Close()
+
+	// Read response body
+	statusCode = resp.StatusCode
+
+	result, err := ioutil.ReadAll(resp.Body)
+
+	if err != nil {
+		fmt.Printf("Error when converting response body to []byte: %+v\n", err.Error())
+		return nil, statusCode, err
+	}
+
+	return result, statusCode, nil
+}
+
+// sendPost sends HTTP POST request to the specified URI. Args can be url.Values, http.Header, and []byte type.
+func sendPost(method string, uri string, args ...interface{}) (responseBody []byte, statusCode int, err error) {
+	client := &http.Client{}
+	req, _ := http.NewRequest(method, uri, nil)
+
+	for _, arg := range args {
+		switch val := arg.(type) {
+		case url.Values:
+			// Assign request body
+			req.Body = ioutil.NopCloser(strings.NewReader(val.Encode()))
+
+		case http.Header:
+			// Assign request header
+			req.Header = val
+
+		case []byte:
+			// Assign request body
+			data := bytes.NewBuffer(val)
+			req.Body = ioutil.NopCloser(data)
+		}
+	}
+
+	resp, err := client.Do(req)
+
+	if err != nil {
+		fmt.Printf("Response error. Error:  %+v\n", err.Error())
+
+		return nil, 500, err
+	}
+
+	defer resp.Body.Close()
+
+	statusCode = resp.StatusCode
+
+	// Read response body
+	result, err := ioutil.ReadAll(resp.Body)
+
+	if err != nil {
+		fmt.Printf("Error when reading response body: %+v\n", err.Error())
+		return nil, statusCode, err
+	}
+
+	return result, statusCode, nil
+}
 
 // RemoveAtIndex removes element from array data at index.
 func RemoveAtIndex(data interface{}, index int) (interface{}, error) {
@@ -35,17 +121,7 @@ func RemoveAtIndex(data interface{}, index int) (interface{}, error) {
 	return resultSlice.Interface(), nil
 }
 
-/**
- * SendRequest is used to send http request
- * Params:
- * 		string 				method 			http methods (GET | POST | PUT | DELETE)
- * 		string				uri				http url
- * 		...interface{}		args			optional http parameters (headers, request body)
- * 	Return:
- * 		[]byte				responseBody
- * 		int					statusCode
- * 		error				err
- */
+// SendRequest sends HTTP GET, POST, or PUT request to the specified URI. Args can be url.Values, http.Header, and []byte type.
 func SendRequest(method string, uri string, args ...interface{}) (responseBody []byte, statusCode int, err error) {
 	method = strings.ToUpper(method)
 
@@ -54,7 +130,7 @@ func SendRequest(method string, uri string, args ...interface{}) (responseBody [
 		resp, statusCode, err := sendGet(method, uri, args...)
 		return resp, statusCode, err
 
-	case "POST":
+	case "POST", "PUT":
 		resp, statusCode, err := sendPost(method, uri, args...)
 		return resp, statusCode, err
 
@@ -62,108 +138,10 @@ func SendRequest(method string, uri string, args ...interface{}) (responseBody [
 		err := errors.New("Request method is not supported")
 		return nil, http.StatusMethodNotAllowed, err
 	}
-
 }
 
-/**
- * sendGet is used to send http GET request
- * Params:
- * 		string 				method 			GET http methods
- * 		string				uri				http url
- * 		...interface{}		args			optional http parameters (headers, request body)
- * 	Return:
- * 		[]byte				responseBody
- * 		int					statusCode
- * 		error				err
- */
-func sendGet(method string, uri string, args ...interface{}) (responseBody []byte, statusCode int, err error) {
-	client := &http.Client{}
-	req, _ := http.NewRequest(method, uri, nil)
-
-	for _, arg := range args {
-		switch val := arg.(type) {
-		case url.Values:
-			// Assign http query to the request URL
-			req.URL.RawQuery = val.Encode()
-
-		case http.Header:
-			// Assign request header
-			req.Header = val
-		}
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Printf("Response error. Error:  %+v\n", err.Error())
-		return nil, resp.StatusCode, err
-	}
-
-	defer resp.Body.Close()
-
-	bodyResp, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Printf("Error when reading response body: %+v\n", err.Error())
-		return nil, resp.StatusCode, err
-	}
-
-	return bodyResp, resp.StatusCode, nil
-}
-
-/**
- * sendPost is used to send http POST request
- * Params:
- * 		string 				method 			POST http methods
- * 		string				uri				http url
- * 		...interface{}		args			optional http parameters (headers, request body)
- * 	Return:
- * 		[]byte				responseBody
- * 		int					statusCode
- * 		error				err
- */
-func sendPost(method string, uri string, args ...interface{}) (responseBody []byte, statusCode int, err error) {
-	client := &http.Client{}
-	req, _ := http.NewRequest(method, uri, nil)
-
-	for _, arg := range args {
-		switch val := arg.(type) {
-		case url.Values:
-			// Assign request body
-			req.Body = ioutil.NopCloser(strings.NewReader(val.Encode()))
-
-		case http.Header:
-			// Assign request header
-			req.Header = val
-		}
-	}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		fmt.Printf("Response error. Error:  %+v\n", err.Error())
-		return nil, resp.StatusCode, err
-	}
-
-	defer resp.Body.Close()
-
-	bodyResp, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Printf("Error when reading response body: %+v\n", err.Error())
-		return nil, resp.StatusCode, err
-	}
-
-	return bodyResp, resp.StatusCode, nil
-}
-
-/**
- * GetEnv gets the environment variable. If environment variable is not set,
- * it returns the fallback.
- *
- * Params:
- * 		string 		key
- * 		string		fallback		Default env variable if env with "key" is not set
- *
- * Returns:
- * 		string		env
- */
+// GetEnv gets the environment variable. If environment variable is not set,
+// it returns the fallback.
 func GetEnv(key string, fallback string) string {
 	env := os.Getenv(key)
 
@@ -172,4 +150,28 @@ func GetEnv(key string, fallback string) string {
 	}
 
 	return env
+}
+
+// InArray checks whether needle is in haystack.
+func InArray(needle interface{}, haystack interface{}) (bool, int, error) {
+	haystackValue := reflect.ValueOf(haystack)
+	haystackType := haystackValue.Type()
+
+	if haystackType.Kind() != reflect.Array && haystackType.Kind() != reflect.Slice {
+		err := errors.New("Parameter 2 is not an array or slice")
+		return false, -1, err
+	}
+
+	switch haystackType.Kind() {
+	case reflect.Slice, reflect.Array:
+		for i := 0; i < haystackValue.Len(); i++ {
+			hayVal := haystackValue.Index(i).Interface()
+
+			if reflect.DeepEqual(hayVal, needle) {
+				return true, i, nil
+			}
+		}
+	}
+
+	return false, -1, nil
 }
