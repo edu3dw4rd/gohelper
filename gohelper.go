@@ -10,6 +10,7 @@ import (
 	"os"
 	"reflect"
 	"strings"
+	"time"
 )
 
 // sendGet sends HTTP GET request to the specified URI. Args can be url.Values and http.Header type.
@@ -174,4 +175,20 @@ func InArray(needle interface{}, haystack interface{}) (bool, int, error) {
 	}
 
 	return false, -1, nil
+}
+
+// GetFormattedLocalTime gets formatted local time based on the given time, format and location
+func GetFormattedLocalTime(timeInput time.Time, format string, location string) (localTime string, err error) {
+	loc, err := time.LoadLocation(location)
+	if err != nil {
+		return "", err
+	}
+
+	if format == "" {
+		format = "2 January 2006 15:04 WIB"
+	}
+
+	localTime = timeInput.In(loc).Format(format)
+
+	return localTime, nil
 }
