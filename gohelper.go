@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"reflect"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -191,4 +192,16 @@ func GetFormattedLocalTime(timeInput time.Time, format string, location string) 
 	localTime = timeInput.In(loc).Format(format)
 
 	return localTime, nil
+}
+
+// IsEmptyString checks whether given str is empty string
+func IsEmptyString(str string) bool {
+	space := regexp.MustCompile(`\s+`)
+	isEmpty := false
+
+	if space.ReplaceAllString(str, "") == "" {
+		isEmpty = true
+	}
+
+	return isEmpty
 }
