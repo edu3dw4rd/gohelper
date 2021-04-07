@@ -205,3 +205,14 @@ func IsEmptyString(str string) bool {
 
 	return isEmpty
 }
+
+// HasSpecialCharacters checks whether given string str has special characters
+func HasSpecialCharacters(str string) bool {
+	re := regexp.MustCompile(`^[a-zA-Z0-9\.\, ]+$`)
+
+	if !re.MatchString(str) {
+		return true
+	}
+
+	return false
+}
