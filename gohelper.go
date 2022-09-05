@@ -216,3 +216,14 @@ func HasSpecialCharacters(str string) bool {
 
 	return false
 }
+
+// ReplaceIndonesianPhoneCountryCodeToZero replaces Indonesian country code "+62" | "62" with "0" in given phoneNumber
+func ReplaceIndonesianPhoneCountryCodeToZero(phoneNumber string) string {
+	indoCountryCodeRegex := regexp.MustCompile(`\+?(62+)`)
+
+	if indoCountryCodeRegex.MatchString(phoneNumber) {
+		phoneNumber = indoCountryCodeRegex.ReplaceAllString(phoneNumber, "0")
+	}
+
+	return phoneNumber
+}
